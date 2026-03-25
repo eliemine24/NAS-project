@@ -302,13 +302,31 @@ def write_ipv4_address_family(conf, router, router_list, as_list, IPprotocol):
                 continue
             
             # Check relationship: is current router a PROVIDER, PEER, or CLIENT of neighbor AS?
-            if router.AS_name in as_router_voisin.providers:
-                conf.write(f"""  neighbor {voisin.split('/', 1)[0]} route-map client in\n""")
-            elif router.AS_name in as_router_voisin.peers:
-                conf.write(f"""  neighbor {voisin.split('/', 1)[0]} route-map peer in\n""")
-            elif router.AS_name in as_router_voisin.clients:
-                conf.write(f"""  neighbor {voisin.split('/', 1)[0]} route-map provider in\n""")
-    conf.write(""" exit-address-family\n""")
+            # if router.AS_name in as_router_voisin.providers:
+            #     conf.write(f"""  neighbor {voisin.split('/', 1)[0]} route-map client in\n""")
+            # elif router.AS_name in as_router_voisin.peers:
+            #     conf.write(f"""  neighbor {voisin.split('/', 1)[0]} route-map peer in\n""")
+            # elif router.AS_name in as_router_voisin.clients:
+            #     conf.write(f"""  neighbor {voisin.split('/', 1)[0]} route-map provider in\n""")
+    conf.write(""" exit-address-family
+!
+ip forward-protocol nd
+!
+!
+no ip http server
+no ip http secure-server
+!
+!
+route-map client permit 10
+ set local-preference 200
+!
+route-map provider permit 10
+ set local-preference 80
+!
+route-map peer permit 10
+ set local-preference 90
+!
+!\n""")
 
 
 def write_ipv6_address_family(conf, router, router_list, as_list, IPprotocol):
@@ -381,12 +399,12 @@ def write_ipv6_address_family(conf, router, router_list, as_list, IPprotocol):
                 continue
             
             # Check relationship: is current router a PROVIDER, PEER, or CLIENT of neighbor AS?
-            if router.AS_name in as_router_voisin.providers:
-                conf.write(f"""  neighbor {voisin.split('/', 1)[0]} route-map client in\n""")
-            elif router.AS_name in as_router_voisin.peers:
-                conf.write(f"""  neighbor {voisin.split('/', 1)[0]} route-map peer in\n""")
-            elif router.AS_name in as_router_voisin.clients:
-                conf.write(f"""  neighbor {voisin.split('/', 1)[0]} route-map provider in\n""")     
+        #     if router.AS_name in as_router_voisin.providers:
+        #         conf.write(f"""  neighbor {voisin.split('/', 1)[0]} route-map client in\n""")
+        #     elif router.AS_name in as_router_voisin.peers:
+        #         conf.write(f"""  neighbor {voisin.split('/', 1)[0]} route-map peer in\n""")
+        #     elif router.AS_name in as_router_voisin.clients:
+        #         conf.write(f"""  neighbor {voisin.split('/', 1)[0]} route-map provider in\n""")     
         conf.write(""" exit-address-family
 !
 ip forward-protocol nd
