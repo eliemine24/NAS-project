@@ -185,7 +185,7 @@ def creer_registre_dynamique(donnees_intent):
             for nom_int, info_int in donnees_intent["Structure"][id_as]["ROUTERS"][nom_r]["INTERFACES"].items():
                 if "PROTOCOL" in info_int and info_int["PROTOCOL"] == "EBGP":
                     # Assigner une adresse loopback au routeur si il est de bordure
-                    registre[nom_r]["LOOPBACK0"] = f"{lb_net.hosts()[0]+loopback_address_skip_number+nmb_routeur_lb}/32"
+                    registre[nom_r]["LOOPBACK0"] = f"{list(lb_net.hosts())[0]+loopback_address_skip_number+nmb_routeur_lb}/32"
                     nmb_routeur_lb += 1
                     break
 
@@ -211,8 +211,8 @@ def creer_registre_dynamique(donnees_intent):
                         index_lien_interne[id_as] += 4
                     
                     # Assigner les adresses aux deux extrémités du lien
-                    registre[nom_r][nom_int] = f"{net.hosts()[0]}/30"
-                    registre.setdefault(voisin, {})[int_voisin] = f"{net.hosts()[0]+1}/30"
+                    registre[nom_r][nom_int] = f"{list(net.hosts())[0]}/30"
+                    registre.setdefault(voisin, {})[int_voisin] = f"{list(net.hosts())[0]+1}/30"
                     # Marquer le lien comme traité
                     liens_vus.add(paire)
             nmb_routeur += 1
