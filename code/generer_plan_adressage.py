@@ -298,15 +298,17 @@ def generer_plan_adressage(intention):
     return resultat
 
 #EXECUTION
+
 # Cette section exécute le script principal quand le fichier est lancé directement
 
 # Obtenir le chemin du dossier courant (où est situé ce script)
 dossier = os.path.dirname(os.path.abspath(__file__))
 # Construire le chemin du fichier d'intention
-f_entree = os.path.join(dossier, "Intent_file.json")
+f_entree = os.path.join(dossier, "pingu.json")
 
 # Charger le fichier d'intention JSON
 intent = charger_json_en_dict(f_entree)
+
 
 # Vérifier si le fichier a pu être chargé avec succès
 if intent:
@@ -326,3 +328,4 @@ if intent:
     else:
         print("ERREUR CRITIQUE : Aucune clé 'Structure' ou 'structure' trouvée.")
         print("Voici le contenu du fichier pour t'aider :", intent)
+
