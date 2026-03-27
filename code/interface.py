@@ -13,4 +13,4 @@ class Interface():
         self.cost = ""
 
     def __str__(self):
-        print(f"interface name : {self.name} \ninterface address : {self.address} \ninterface protocol : {self.protocol}")
+        print(f"interface name : {self.name} \ninterface address : {self.address} \ninterface protocol : {self.protocol_list[:]}")

@@ -8,14 +8,16 @@ from datetime import datetime
 import ipaddress
 
 
-def write_config(router, out_file,router_list, as_list, IPprotocol):
+def write_config(router, out_file, router_list, as_list, IPprotocol):
     """Écrit la configuration complète d'un routeur dans un fichier .cfg."""
     conf = open(out_file, 'w')
     write_header(conf, router, IPprotocol)
     write_interfaces_config(conf, router, IPprotocol)
-    write_bgp_config(conf, router, router_list, IPprotocol)
-    write_ipv4_address_family(conf, router, router_list, as_list, IPprotocol)
-    write_ipv6_address_family(conf, router, router_list, as_list, IPprotocol)
+    for i in router.liste_int:
+        if "EBGP" in i.protocol_list:
+            write_bgp_config(conf, router, router_list, IPprotocol)
+            write_ipv4_address_family(conf, router, router_list, as_list, IPprotocol)
+            write_ipv6_address_family(conf, router, router_list, as_list, IPprotocol)
     write_end(conf, router, IPprotocol)
     conf.close()
     return out_file
@@ -165,6 +167,7 @@ def write_FE(conf, interface, IPprotocol):
     # Configs OSPF
     if "OSPF" in interface.protocol_list :
         conf.write(f""" {"ipv6 " if IPprotocol == 6 else "ip "}ospf 10 area 0\n""")
+        conf.write(""" mpls ip\n""")
         # Gère les couts si il y en a
         if interface.cost != "":
             conf.write(f""" {"ipv6 " if IPprotocol == 6 else "ip "}ospf cost {interface.cost}\n""")
@@ -194,6 +197,7 @@ def write_GE(conf, interface, IPprotocol):
     # Configs OSPF
     if "OSPF" in interface.protocol_list :
         conf.write(f""" {"ipv6 " if IPprotocol == 6 else "ip "}ospf 10 area 0\n""")
+        conf.write(""" mpls ip\n""")
         # Gère les couts si il y en a
         if interface.cost != "":
             conf.write(f""" {"ipv6 " if IPprotocol == 6 else "ip "}ospf cost {interface.cost}\n""")
@@ -216,6 +220,7 @@ router bgp {router.AS_name}
 """)
     for interface in router.liste_int:
         if interface.name == "LOOPBACK0":
+            conf.write("""""")
             for neighbor in interface.neighbors_address:
                 conf.write(f""" neighbor {neighbor.split('/', 1)[0]} remote-as {router.AS_name}
  neighbor {neighbor.split('/', 1)[0]} update-source {interface.name}
@@ -264,9 +269,9 @@ def write_ipv4_address_family(conf, router, router_list, as_list, IPprotocol):
                     conf.write(f"""  neighbor {neighbor.split('/', 1)[0]} next-hop-self\n""")
 
             #sinon si on a une interface de loopback alors on configure l'IBGP avec toutes les autres adresses de loopback
-            elif interface.name == "LOOPBACK0":
-                for neighbor in interface.neighbors_address:
-                    conf.write(f"""  neighbor {neighbor.split('/', 1)[0]} activate\n""")
+            # elif interface.name == "LOOPBACK0":
+            #     for neighbor in interface.neighbors_address:
+            #         conf.write(f"""  neighbor {neighbor.split('/', 1)[0]} activate\n""")
                     
         # Write local preference based on relationship type (client=200, peer=90, provider=80)
         for inter in router.liste_int:
@@ -361,9 +366,9 @@ def write_ipv6_address_family(conf, router, router_list, as_list, IPprotocol):
                     conf.write(f"""  neighbor {neighbor.split('/', 1)[0]} next-hop-self\n""")
 
             #sinon si on a une interface de loopback alors on configure l'IBGP avec toutes les autres adresses de loopback
-            elif interface.name == "LOOPBACK0":
-                for neighbor in interface.neighbors_address:
-                    conf.write(f"""  neighbor {neighbor.split('/', 1)[0]} activate\n""")
+            # elif interface.name == "LOOPBACK0":
+            #     for neighbor in interface.neighbors_address:
+            #         conf.write(f"""  neighbor {neighbor.split('/', 1)[0]} activate\n""")
                     
         # Write local preference based on relationship type (client=200, peer=90, provider=80)
         for inter in router.liste_int:

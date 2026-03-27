@@ -169,7 +169,7 @@ def creer_registre_dynamique(donnees_intent):
     liens_vus = set()  # Ensemble pour éviter de traiter deux fois le même lien
     # Initialiser les index des sous-réseaux pour chaque AS
     index_lien_interne = {id_as: 1 for id_as in AS_CONFIG}
-    index_ebgp = 0  # Index pour les sous-réseaux eBGP
+    index_ebgp = 1  # Index pour les sous-réseaux eBGP
     loopback_address_skip_number = 100 # on définit un nombre d'addresse à skip (à laissez pour les addresses de liens) quand on assigne les addresses de loopback.
 
     # Parcourir chaque système autonome
@@ -199,16 +199,16 @@ def creer_registre_dynamique(donnees_intent):
                     if info_int.get("PROTOCOL") == "EBGP":
                         # Utiliser un sous-réseau eBGP
                         net = EBGP_CONFIG["INTER_AS"]["SOUS_RESEAUX"][index_ebgp]
-                        index_ebgp += 1
+                        index_ebgp += 4
                     else:
                         # Utiliser un sous-réseau interne à l'AS
                         idx = index_lien_interne[id_as]
                         net = as_info["SOUS_RESEAUX"][idx]
-                        index_lien_interne[id_as] += 1
+                        index_lien_interne[id_as] += 4
                     
                     # Assigner les adresses aux deux extrémités du lien
-                    registre[nom_r][nom_int] = f"{net.hosts()[0]+1}/24"
-                    registre.setdefault(voisin, {})[int_voisin] = f"{net.hosts()[0]+2}/24"
+                    registre[nom_r][nom_int] = f"{net.hosts()[0]}/30"
+                    registre.setdefault(voisin, {})[int_voisin] = f"{net.hosts()[0]+1}/30"
                     # Marquer le lien comme traité
                     liens_vus.add(paire)
             nmb_routeur += 1
@@ -286,7 +286,7 @@ def generer_plan_adressage(intention):
                 if "PROTOCOL" in info_int: r_data["INTERFACES"][nom_int]["PROTOCOL"] = "EBGP"
 
             # Récupérer les adresses loopback des autres routeurs du même AS
-            autres_lb = [registre[a]["LOOPBACK0"] for a in info_as["ROUTEURS"] if a != nom_r]
+            autres_lb = [registre[a]["LOOPBACK0"] for a in info_as["ROUTEURS"] if a != nom_r ]
             # Configurer l'interface loopback
             r_data["INTERFACES"]["LOOPBACK0"] = {
                 "ADDRESS": registre[nom_r]["LOOPBACK0"],
