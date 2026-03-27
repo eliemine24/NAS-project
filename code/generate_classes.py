@@ -97,6 +97,9 @@ def generate_AS(as_relations,intent):
     if "CLIENTS" in as_relations:
         for c in as_relations.get("CLIENTS", []):
             As.clients.append(intent["Intent"][c]["AS_NAME"])
+    if "VPN" in as_relations:
+        As.vpn_clients = as_relations.get("VPN", [])
+        print(As.vpn_clients)
     return As
 
 # =======================

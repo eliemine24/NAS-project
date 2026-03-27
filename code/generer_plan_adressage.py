@@ -243,7 +243,13 @@ def generer_plan_adressage(intention):
     registre = creer_registre_dynamique(intention)
     # Structure pour stocker le résultat final
     resultat = {"Intent": intention.get("Intent", {}), "Structure": {}}
-
+    rt_lastnmb = 1000
+    for as_name,as_info in resultat["Intent"].items():
+        if "VPN" in as_info:
+            for nom_vpn,clients in resultat["Intent"][as_name]["VPN"].items():
+                resultat["Intent"][as_name]["VPN"][nom_vpn] = {"CLIENTS":clients["CLIENTS"],
+                                                               "RT":f"100:{rt_lastnmb}"}
+                rt_lastnmb += 10
     # Parcourir chaque système autonome
     nmb_routeur = 1
     for id_as, info_as in AS_CONFIG.items():

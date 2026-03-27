@@ -5,8 +5,26 @@
             "AS_NAME": "1111",
             "PEERS": [
                 "AS2",
-                "AS3"
-            ]
+                "AS3",
+                "AS4",
+                "AS5"
+            ],
+            "VPN": {
+                "HAUT": {
+                    "CLIENTS": [
+                        "CE1",
+                        "CE2"
+                    ],
+                    "RT": "100:1000"
+                },
+                "BAS": {
+                    "CLIENTS": [
+                        "CE3",
+                        "CE4"
+                    ],
+                    "RT": "100:1010"
+                }
+            }
         },
         "AS2": {
             "AS_NAME": "2222",
@@ -16,6 +34,18 @@
         },
         "AS3": {
             "AS_NAME": "3333",
+            "PEERS": [
+                "AS1"
+            ]
+        },
+        "AS4": {
+            "AS_NAME": "4444",
+            "PEERS": [
+                "AS1"
+            ]
+        },
+        "AS5": {
+            "AS_NAME": "5555",
             "PEERS": [
                 "AS1"
             ]
@@ -39,6 +69,13 @@
                             "ADDRESS": "192.200.0.1/30",
                             "NEIGHBORS_ADDRESS": [
                                 "192.200.0.2/30"
+                            ],
+                            "PROTOCOL": "EBGP"
+                        },
+                        "G3/0": {
+                            "ADDRESS": "192.200.0.5/30",
+                            "NEIGHBORS_ADDRESS": [
+                                "192.200.0.6/30"
                             ],
                             "PROTOCOL": "EBGP"
                         },
@@ -94,9 +131,16 @@
                             ]
                         },
                         "G2/0": {
-                            "ADDRESS": "192.200.0.5/30",
+                            "ADDRESS": "192.200.0.9/30",
                             "NEIGHBORS_ADDRESS": [
-                                "192.200.0.6/30"
+                                "192.200.0.10/30"
+                            ],
+                            "PROTOCOL": "EBGP"
+                        },
+                        "G3/0": {
+                            "ADDRESS": "192.200.0.13/30",
+                            "NEIGHBORS_ADDRESS": [
+                                "192.200.0.14/30"
                             ],
                             "PROTOCOL": "EBGP"
                         },
@@ -124,9 +168,9 @@
                             ]
                         },
                         "G2/0": {
-                            "ADDRESS": "192.200.0.6/30",
+                            "ADDRESS": "192.200.0.10/30",
                             "NEIGHBORS_ADDRESS": [
-                                "192.200.0.5/30"
+                                "192.200.0.9/30"
                             ],
                             "PROTOCOL": "EBGP"
                         },
@@ -182,6 +226,84 @@
                             "ADDRESS": "192.170.0.2/30",
                             "NEIGHBORS_ADDRESS": [
                                 "192.170.0.1/30"
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "AS4": {
+            "AS_NAME": "4444",
+            "PROTOCOL": "OSPF",
+            "ROUTERS": {
+                "CE3": {
+                    "ROUTER_ID": "9.9.9.9",
+                    "INTERFACES": {
+                        "G1/0": {
+                            "ADDRESS": "192.171.0.1/30",
+                            "NEIGHBORS_ADDRESS": [
+                                "192.171.0.2/30"
+                            ]
+                        },
+                        "G2/0": {
+                            "ADDRESS": "192.200.0.6/30",
+                            "NEIGHBORS_ADDRESS": [
+                                "192.200.0.5/30"
+                            ],
+                            "PROTOCOL": "EBGP"
+                        },
+                        "LOOPBACK0": {
+                            "ADDRESS": "192.171.0.101/32",
+                            "NEIGHBORS_ADDRESS": []
+                        }
+                    }
+                },
+                "R3": {
+                    "ROUTER_ID": "10.10.10.10",
+                    "INTERFACES": {
+                        "G1/0": {
+                            "ADDRESS": "192.171.0.2/30",
+                            "NEIGHBORS_ADDRESS": [
+                                "192.171.0.1/30"
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "AS5": {
+            "AS_NAME": "5555",
+            "PROTOCOL": "OSPF",
+            "ROUTERS": {
+                "CE4": {
+                    "ROUTER_ID": "11.11.11.11",
+                    "INTERFACES": {
+                        "G1/0": {
+                            "ADDRESS": "192.172.0.1/30",
+                            "NEIGHBORS_ADDRESS": [
+                                "192.172.0.2/30"
+                            ]
+                        },
+                        "G2/0": {
+                            "ADDRESS": "192.200.0.14/30",
+                            "NEIGHBORS_ADDRESS": [
+                                "192.200.0.13/30"
+                            ],
+                            "PROTOCOL": "EBGP"
+                        },
+                        "LOOPBACK0": {
+                            "ADDRESS": "192.172.0.101/32",
+                            "NEIGHBORS_ADDRESS": []
+                        }
+                    }
+                },
+                "R4": {
+                    "ROUTER_ID": "12.12.12.12",
+                    "INTERFACES": {
+                        "G1/0": {
+                            "ADDRESS": "192.172.0.2/30",
+                            "NEIGHBORS_ADDRESS": [
+                                "192.172.0.1/30"
                             ]
                         }
                     }
