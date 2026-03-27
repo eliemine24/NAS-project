@@ -176,14 +176,18 @@ def creer_registre_dynamique(donnees_intent):
     for id_as, as_info in AS_CONFIG.items():
         # Parcourir chaque routeur du système autonome
         nmb_routeur = 1
-
+        nmb_routeur_lb = 1
         for nom_r in as_info["ROUTEURS"]:
             # Initialiser l'entrée du routeur dans le registre
             registre.setdefault(nom_r, {})
             # Récupérer le réseau de loopback
             lb_net = as_info["SOUS_RESEAUX"][0]
-            # Assigner une adresse loopback au routeur
-            registre[nom_r]["LOOPBACK0"] = f"{lb_net.hosts()[0]+loopback_address_skip_number+nmb_routeur}/32"
+            for nom_int, info_int in donnees_intent["Structure"][id_as]["ROUTERS"][nom_r]["INTERFACES"].items():
+                if "PROTOCOL" in info_int and info_int["PROTOCOL"] == "EBGP":
+                    # Assigner une adresse loopback au routeur si il est de bordure
+                    registre[nom_r]["LOOPBACK0"] = f"{lb_net.hosts()[0]+loopback_address_skip_number+nmb_routeur_lb}/32"
+                    nmb_routeur_lb += 1
+                    break
 
             # Parcourir les interfaces du routeur
             interfaces = donnees_intent["Structure"][id_as]["ROUTERS"][nom_r]["INTERFACES"]
@@ -251,7 +255,13 @@ def generer_plan_adressage(intention):
         # Récupérer les routeurs source de l'intention
         routeurs_source = intention["Structure"][id_as]["ROUTERS"]
 
-        # Parcourir chaque routeur
+        # Parcourir chaque routeur une première fois pour trouver les routeurs de bordures
+        routeur_bordure = []
+        for nom_r, contenu_r in routeurs_source.items():
+            for nom_int, info_int in contenu_r["INTERFACES"].items():
+                if "PROTOCOL" in info_int and info_int["PROTOCOL"] == "EBGP":
+                    routeur_bordure.append(nom_r)
+                    break
 
         for nom_r, contenu_r in routeurs_source.items():
 
@@ -284,14 +294,19 @@ def generer_plan_adressage(intention):
 
                 # Ajouter le protocole eBGP si applicable
                 if "PROTOCOL" in info_int: r_data["INTERFACES"][nom_int]["PROTOCOL"] = "EBGP"
-
-            # Récupérer les adresses loopback des autres routeurs du même AS
-            autres_lb = [registre[a]["LOOPBACK0"] for a in info_as["ROUTEURS"] if a != nom_r ]
-            # Configurer l'interface loopback
-            r_data["INTERFACES"]["LOOPBACK0"] = {
-                "ADDRESS": registre[nom_r]["LOOPBACK0"],
-                "NEIGHBORS_ADDRESS": autres_lb
-            }
+            
+            if nom_r in routeur_bordure:
+                # Récupérer les adresses loopback des autres routeurs de bordures du même AS
+                autres_lb = []
+                for a in info_as["ROUTEURS"]:
+                    #on check si c'est des routeurs de bordures
+                    if a != nom_r and a in routeur_bordure:
+                        autres_lb.append(registre[a]["LOOPBACK0"])
+                # Configurer l'interface loopback
+                r_data["INTERFACES"]["LOOPBACK0"] = {
+                    "ADDRESS": registre[nom_r]["LOOPBACK0"],
+                    "NEIGHBORS_ADDRESS": autres_lb
+                }
             # Ajouter le routeur au résultat
             resultat["Structure"][id_as]["ROUTERS"][nom_r] = r_data
             nmb_routeur += 1
