@@ -8,6 +8,7 @@ Il supporte les configurations intra-AS et inter-AS.
 import ipaddress
 import json
 import os
+from generate_classes import json_to_dict
 
 #VARIABLES GLOBALES
 
@@ -312,35 +313,32 @@ def generer_plan_adressage(intention):
             nmb_routeur += 1
     return resultat
 
-#EXECUTION
 
-# Cette section exécute le script principal quand le fichier est lancé directement
+def ecrire_plan_adressage(file_name):
+    dossier = os.path.dirname(os.path.abspath(__file__))
+    # Construire le chemin du fichier d'intention
+    f_entree = os.path.join(dossier, file_name)
 
-# Obtenir le chemin du dossier courant (où est situé ce script)
-dossier = os.path.dirname(os.path.abspath(__file__))
-# Construire le chemin du fichier d'intention
-f_entree = os.path.join(dossier, "pingu.json")
-
-# Charger le fichier d'intention JSON
-intent = charger_json_en_dict(f_entree)
+    # Charger le fichier d'intention JSON
+    intent = charger_json_en_dict(f_entree)
 
 
-# Vérifier si le fichier a pu être chargé avec succès
-if intent:
-    print(f"Clés trouvées à la racine du JSON : {list(intent.keys())}")
-    
-    # Vérifier la présence de la clé 'Structure' (majuscule ou minuscule)
-    cle_structure = "Structure" if "Structure" in intent else "structure"
-    
-    if cle_structure in intent:
-        print(f"Succès : Clé '{cle_structure}' trouvée !")
-        # Initialiser la topologie (remplit AS_CONFIG et EBGP_CONFIG)
-        initialiser_topologie(intent)
-        # Générer le plan d'adressage complet
-        mon_plan = generer_plan_adressage(intent)
-        # Sauvegarder le résultat dans un fichier JSON
-        sauvegarder_dict_en_json(mon_plan, "test.json")
-    else:
-        print("ERREUR CRITIQUE : Aucune clé 'Structure' ou 'structure' trouvée.")
-        print("Voici le contenu du fichier pour t'aider :", intent)
+    # Vérifier si le fichier a pu être chargé avec succès
+    if intent:
+        print(f"Clés trouvées à la racine du JSON : {list(intent.keys())}")
+        
+        # Vérifier la présence de la clé 'Structure' (majuscule ou minuscule)
+        cle_structure = "Structure" if "Structure" in intent else "structure"
+        
+        if cle_structure in intent:
+            print(f"Succès : Clé '{cle_structure}' trouvée !")
+            # Initialiser la topologie (remplit AS_CONFIG et EBGP_CONFIG)
+            initialiser_topologie(intent)
+            # Générer le plan d'adressage complet
+            mon_plan = generer_plan_adressage(intent)
+            # Sauvegarder le résultat dans un fichier JSON
+            sauvegarder_dict_en_json(mon_plan, "test.json")
+        else:
+            print("ERREUR CRITIQUE : Aucune clé 'Structure' ou 'structure' trouvée.")
+            print("Voici le contenu du fichier pour t'aider :", intent)
 

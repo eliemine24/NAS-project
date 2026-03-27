@@ -7,32 +7,32 @@ from interface import Interface
 from generate_classes import *
 from write_config import *
 from drag_n_drop_bot import find_repository_names, drag_and_drop
-from generer_plan_adressage import generer_plan_adressage
+from generer_plan_adressage import ecrire_plan_adressage
 import os
 
-if os.name == 'nt':
+if os.name == 'nt':     # for windows os
     PROJECT_NAME = str(input("Nom du dossier contenant le projet : "))
     LPATH = find_local_path() +"\\"                        # chemin du script
     HPATH = LPATH.rstrip('\\').rsplit('\\', 1)[0]          # chemin du projet
-    MAIN_DEST = HPATH + "\\project-files\\dynamips"         # destination générale des .cfg
     FILE_NAME = "code\\intent_file.json"
     INTENT = json_to_dict(FILE_NAME)             # fichier d'intention
-    IPPROTOCOL = int(input("Quel protocol ip utilisez-vous ? (4 ou 6): "))
 
 else:
     LPATH = find_local_path() +"/"                        # chemin du script
     HPATH = LPATH.rstrip('/').rsplit('/', 1)[0]+"/"           # chemin du projet
-    MAIN_DEST = HPATH + "/project-files/dynamips"         # destination générale des .cfg
-    FILE_NAME = "pingu.json"
+    FILE_NAME = "pingu.json"                               # intent file's name
     INTENT = json_to_dict(FILE_NAME)             # fichier d'intention
     PROJECT_NAME = "projet_test"    #str(input("Nom du dossier contenant le projet : "))
-    IPPROTOCOL = 4 #int(input("Quel protocol ip utilisez-vous ? (4 ou 6): "))
+
 
 print("--- pathes ---")
 print(f"LPATH : {LPATH}")
 print(f"HPATH : {HPATH}\n")
+print("--------------")
 
-generer_plan_adressage(INTENT)
+IPPROTOCOL = 4 #int(input("Quel protocol ip utilisez-vous ? (4 ou 6): "))
+
+ecrire_plan_adressage(FILE_NAME)
 
 # génération des routeurs et interfaces
 router_list, as_list = generate_network_classes(LPATH+"test.json")
@@ -53,6 +53,6 @@ for r in router_list:
 # drag n drop
 REPONAMES = find_repository_names(router_list, PROJECT_NAME, HPATH)
 print("--- reponames ---")
-print(REPONAMES)
+for repo in REPONAMES.items() : print(repo)
 
 drag_and_drop(LPATH, HPATH, PROJECT_NAME, REPONAMES)
