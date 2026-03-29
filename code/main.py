@@ -35,8 +35,10 @@ IPPROTOCOL = 4 #int(input("Quel protocol ip utilisez-vous ? (4 ou 6): "))
 ecrire_plan_adressage(FILE_NAME)
 
 # génération des routeurs et interfaces
-router_list, as_list = generate_network_classes(LPATH+"test.json")
-
+if os.name == 'nt': 
+    router_list, as_list = generate_network_classes(HPATH+"\\test.json")
+else:
+    router_list, as_list = generate_network_classes(LPATH+"test.json")
 # affichage 
 """
 for r in router_list:
