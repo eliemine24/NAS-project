@@ -14,14 +14,16 @@ def write_config(router, out_file, router_list, as_list, IPprotocol,rd_increment
     write_header(conf, router, IPprotocol)
     if rd_incrementer != 0:
         write_vrf_definition(conf,router,as_list,rd_incrementer)
-    write_interfaces_config(conf, router, as_list, IPprotocol,rd_incrementer)
-    found = False
+    write_interfaces_config(conf, router, router_list,as_list, IPprotocol,rd_incrementer)
     for i in router.liste_int:
-        if "EBGP" in i.protocol_list and not found:
-            write_bgp_config(conf, router, router_list, IPprotocol)
-            write_ipv4_address_family(conf, router, router_list, as_list, IPprotocol)
-            write_ipv6_address_family(conf, router, router_list, as_list, IPprotocol)
-            found = True
+        if "EBGP" in i.protocol_list :
+            write_bgp_config(conf, router, router_list, IPprotocol,rd_incrementer)
+            if rd_incrementer !=0:
+                write_vpnv4_address_family(conf,router,router_list,as_list,IPprotocol,rd_incrementer)
+            else:
+                write_ipv4_address_family(conf, router, router_list, as_list, IPprotocol)
+                write_ipv6_address_family(conf, router, router_list, as_list, IPprotocol)
+            break
 
     write_end(conf, router, IPprotocol)
     conf.close()
@@ -40,7 +42,6 @@ def write_vrf_definition(conf,router,as_list,rd_incrementer):
                 conf.write(""" address-family ipv4\n""")
                 conf.write(""" exit-address-family\n""")
                 conf.write("""!\n""")
-
 
 def write_header(conf, router, IPprotocol):
     """Écrit l'en-tête de la configuration du routeur."""
@@ -140,15 +141,15 @@ end\n""")
 # ======== Interfaces =========
 # =============================
 
-def write_interfaces_config(conf, router,as_list, IPprotocol,rd_incrementer):
+def write_interfaces_config(conf, router,router_list,as_list, IPprotocol,rd_incrementer):
     """Écrit la configuration de toutes les interfaces du routeur."""
     for interface in router.liste_int:
         if interface.name == 'LOOPBACK0':
             write_loopback0(conf, interface, IPprotocol)
         elif 'G' in interface.name :
-            write_GE(conf, interface,as_list, IPprotocol,rd_incrementer)
+            write_GE(conf, interface,router,router_list,as_list, IPprotocol,rd_incrementer)
         else:
-            write_FE(conf, interface,as_list, IPprotocol,rd_incrementer)
+            write_FE(conf, interface,router,router_list,as_list, IPprotocol,rd_incrementer)
 
 
 def write_loopback0(conf, interface, IPprotocol):
@@ -169,7 +170,7 @@ def write_loopback0(conf, interface, IPprotocol):
     conf.write("""!\n""")
 
 
-def write_FE(conf, interface,as_list, IPprotocol,rd_incrementer):
+def write_FE(conf, interface,router,router_list,as_list, IPprotocol,rd_incrementer):
     """Écrit la configuration d'une interface FastEthernet."""
     conf.write(f"""interface {interface.name}
  negotiation auto
@@ -181,6 +182,29 @@ def write_FE(conf, interface,as_list, IPprotocol,rd_incrementer):
  ipv6 enable
  ipv6 address {interface.address}\n""")
     else:
+        if rd_incrementer != 0 and "EBGP" in interface.protocol_list:
+            #içi il faut aller chercher le client auquel cette interface parle, or nous avons seulement les adresses voisines à l'interface
+            #donc il faut aller chercher dans tout les routeurs pour aller trouver le router qui possède l'interface avec laquelle on doit parler
+            j = 0
+            found_client = False
+            while j < len(router_list) and not found_client:
+                r = router_list[j]
+                k = 0
+                while k < len(r.liste_int) and not found_client:
+                    i = r.liste_int[k]
+                    if not found_client and i.address in interface.neighbors_address:
+                        routeur_client = r
+                        found_client = True
+                    k+=1
+                j+=1
+            # maintenant qu'on a trouvé le routeur client et notre routeur, on va pouvoir récupérer son nom dans le dictionnaire VPN de notre AS
+            # on commence par chercher notre AS puis on écrit enfin le vrf de l'interface à partir de son dictionnaire VPN
+            for a in as_list:
+                if a.name == router.AS_name:
+                    #on va chercher le nom de la connexion VPN à partir du nom du client
+                    for nom_vpn,nom_client in a.vpn_clients.items():
+                        if routeur_client.name in nom_client["CLIENTS"]:
+                            conf.write(f""" vrf forwarding {nom_vpn}\n""")
         mask = str(ipaddress.IPv4Interface(interface.address).netmask)
         conf.write(f""" ip address {interface.address.split('/')[0]+" "+mask}\n""")
     # Configs OSPF
@@ -196,7 +220,7 @@ def write_FE(conf, interface,as_list, IPprotocol,rd_incrementer):
     conf.write(f"""!\n""")
 
 
-def write_GE(conf, interface,as_list, IPprotocol,rd_incrementer):
+def write_GE(conf, interface,router,router_list,as_list, IPprotocol,rd_incrementer):
     """Écrit la configuration d'une interface GigaEthernet."""
     conf.write(f"""interface {interface.name}
  negotiation auto
@@ -209,9 +233,30 @@ def write_GE(conf, interface,as_list, IPprotocol,rd_incrementer):
  ipv6 address {interface.address}\n""")
         
     else:
-        # if rd_incrementer != 0:
-        #     for a in as_list:
-        #         if a == interface.AS_name
+        if rd_incrementer != 0 and "EBGP" in interface.protocol_list:
+            #içi il faut aller chercher le client auquel cette interface parle, or nous avons seulement les adresses voisines à l'interface
+            #donc il faut aller chercher dans tout les routeurs pour aller trouver le router qui possède l'interface avec laquelle on doit parler
+            j = 0
+            found_client = False
+            while j < len(router_list) and not found_client:
+                r = router_list[j]
+                k = 0
+                while k < len(r.liste_int) and not found_client:
+                    i = r.liste_int[k]
+                    if not found_client and i.address in interface.neighbors_address:
+                        routeur_client = r
+                        found_client = True
+                    k+=1
+                j+=1
+            # maintenant qu'on a trouvé le routeur client et notre routeur, on va pouvoir récupérer son nom dans le dictionnaire VPN de notre AS
+            # on commence par chercher notre AS puis on écrit enfin le vrf de l'interface à partir de son dictionnaire VPN
+            for a in as_list:
+                if a.name == router.AS_name:
+                    #on va chercher le nom de la connexion VPN à partir du nom du client
+                    for nom_vpn,nom_client in a.vpn_clients.items():
+                        if routeur_client.name in nom_client["CLIENTS"]:
+                            conf.write(f""" vrf forwarding {nom_vpn}\n""")
+                
         mask = str(ipaddress.IPv4Interface(interface.address).netmask)
         conf.write(f""" ip address {interface.address.split('/')[0]+" "+mask}\n""")
 
@@ -232,7 +277,7 @@ def write_GE(conf, interface,as_list, IPprotocol,rd_incrementer):
 # === Protocoles de routage ===
 # =============================
 
-def write_bgp_config(conf, router,router_list, IPprotocol):
+def write_bgp_config(conf, router,router_list, IPprotocol,rd_incrementer):
     """Écrit la configuration BGP du routeur."""
     conf.write(f"""!
 router bgp {router.AS_name}
@@ -240,13 +285,14 @@ router bgp {router.AS_name}
  bgp log-neighbor-changes{"\n no bgp default ipv4-unicast" if IPprotocol == 6 else ""}
 """)
     for interface in router.liste_int:
+
         if interface.name == "LOOPBACK0":
             conf.write("""""")
             for neighbor in interface.neighbors_address:
                 conf.write(f""" neighbor {neighbor.split('/', 1)[0]} remote-as {router.AS_name}
  neighbor {neighbor.split('/', 1)[0]} update-source {interface.name}
 """)
-        else:
+        elif rd_incrementer == 0:
             for protocol in interface.protocol_list:
                 
                 if protocol == "EBGP":
@@ -266,7 +312,6 @@ def write_ipv4_address_family(conf, router, router_list, as_list, IPprotocol):
         #on va chercher toutes les interfaces et configurer BGP sur chacun d'entre eux: EBGP pour les interfaces en bordure et IBGP pour les loopbacks
         network_done = False
         for interface in router.liste_int:
-
             #si on a du EBGP on va network les réseaux de son AS qui ne sont pas des loopbacks
             if "EBGP" in interface.protocol_list:
                 #si on a pas encore network les réseaux de l'AS, on le fait une fois
@@ -354,7 +399,6 @@ route-map peer permit 10
  set local-preference 90
 !
 !\n""")
-
 
 def write_ipv6_address_family(conf, router, router_list, as_list, IPprotocol):
     """Écrit la configuration address-family IPv6."""
@@ -451,3 +495,12 @@ route-map peer permit 10
  set local-preference 90
 !
 !\n""")
+        
+def write_vpnv4_address_family(conf, router, router_list, as_list, IPprotocol,rd_incrementer):
+    conf.write(""" address-family vpnv4\n""")
+    #on fait toutes les loopback, leurs fonctionnement ne change pas entre la config VPN et iBGP classique
+    for i in router.liste_int:
+        if i == "LOOPBACK0":
+            conf.write(f"""  neighbor {i.address} activate\n""")
+            conf.write(f"""  neighbor {i.address} send-community both\n""")
+        

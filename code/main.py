@@ -14,8 +14,8 @@ if os.name == 'nt':     # for windows os
     PROJECT_NAME = str(input("Nom du dossier contenant le projet : "))
     LPATH = find_local_path() +"\\"                        # chemin du script
     HPATH = LPATH.rstrip('\\').rsplit('\\', 1)[0]          # chemin du projet
-    FILE_NAME = "code\\pingu.json"
-    INTENT = json_to_dict(FILE_NAME)             # fichier d'intention
+    FILE_NAME = "pingu.json"
+    INTENT = json_to_dict("code\\" + FILE_NAME)             # fichier d'intention
 
 else:
     LPATH = find_local_path() +"/"                        # chemin du script
