@@ -3,28 +3,50 @@
         "EBGP_ADDRESSING_RANGE": "192.200.0.0/16",
         "AS1":{
             "AS_NAME":"1111",
-            "PEERS":["AS2","AS3","AS4","AS5"],
+            "PEERS":["AS2","AS3","AS4","AS6","AS7"],
+            "CLIENTS":["AS5"],
+            "PROVIDERS":[],
             "VPN":{
                 "HAUT":{"CLIENTS":["CE1","CE2"]},
-                "BAS":{"CLIENTS":["CE3","CE4"]}
+                "DIAG":{"CLIENTS":["CE5","CE6"]}
             }
         },
         
         "AS2":{
             "AS_NAME":"2222",
-            "PEERS":["AS1"]
+            "PEERS":["AS1"],
+            "CLIENTS":[],
+            "PROVIDERS":[]
         },
         "AS3":{
             "AS_NAME":"3333",
-            "PEERS":["AS1"]
+            "PEERS":["AS1"],
+            "CLIENTS":[],
+            "PROVIDERS":[]
         },
         "AS4":{
             "AS_NAME":"4444",
-            "PEERS":["AS1"]
+            "PEERS":["AS1"],
+            "CLIENTS":[],
+            "PROVIDERS":[]
         },
         "AS5":{
             "AS_NAME":"5555",
-            "PEERS":["AS1"]
+            "PEERS":[],
+            "CLIENTS":[],
+            "PROVIDERS":["AS1"]
+        },
+        "AS6":{
+            "AS_NAME":"6666",
+            "PEERS":["AS1"],
+            "CLIENTS":[],
+            "PROVIDERS":[]
+        },
+        "AS7":{
+            "AS_NAME":"7777",
+            "PEERS":["AS1"],
+            "CLIENTS":[],
+            "PROVIDERS":[]
         }
     },
     "Structure":{
@@ -51,6 +73,9 @@
                         "G3/0": {
                             "NEIGHBORS": {"CE3": "G2/0"},
                             "PROTOCOL": "EBGP"
+                        },
+                        "G4/0": {
+                            "NEIGHBORS": {"P3": "G1/0"}
                         }
 
                     }
@@ -65,6 +90,10 @@
 
                         "G2/0": {
                             "NEIGHBORS": {"P2": "G2/0"}
+                        },
+
+                        "G3/0": {
+                            "NEIGHBORS": {"PE3": "G3/0"}
                         }
                     }
                 },
@@ -78,6 +107,36 @@
 
                         "G2/0": {
                             "NEIGHBORS": {"P1": "G2/0"}
+                        }
+                    }
+                },
+                "P3":{
+
+                    "INTERFACES":{
+
+                        "G1/0": {
+                            "NEIGHBORS": {"PE1": "G4/0"}
+                        },
+
+                        "G2/0": {
+                            "NEIGHBORS": {"P4": "G2/0"}
+                        }
+                    }
+                },
+                "P4":{
+
+                    "INTERFACES":{
+
+                        "G1/0": {
+                            "NEIGHBORS": {"PE2": "G4/0"}
+                        },
+
+                        "G2/0": {
+                            "NEIGHBORS": {"P3": "G2/0"}
+                        },
+
+                        "G3/0": {
+                            "NEIGHBORS": {"PE4": "G3/0"}
                         }
                     }
                 },
@@ -95,6 +154,37 @@
                         "G3/0": {
                             "NEIGHBORS": {"CE4": "G2/0"},
                             "PROTOCOL": "EBGP"
+                        },
+                        "G4/0": {
+                            "NEIGHBORS": {"P4": "G1/0"}
+                        }
+
+                    }
+                },
+                "PE3":{
+
+                    "INTERFACES":{
+
+                        "G2/0": {
+                            "NEIGHBORS": {"CE5": "G2/0"},
+                            "PROTOCOL": "EBGP"
+                        },
+                        "G3/0": {
+                            "NEIGHBORS": {"P1": "G2/0"}
+                        }
+
+                    }
+                },
+                "PE4":{
+
+                    "INTERFACES":{
+
+                        "G2/0": {
+                            "NEIGHBORS": {"CE6": "G2/0"},
+                            "PROTOCOL": "EBGP"
+                        },
+                        "G3/0": {
+                            "NEIGHBORS": {"P4": "G2/0"}
                         }
 
                     }
@@ -220,6 +310,68 @@
 
                         "G1/0": {
                             "NEIGHBORS": {"CE4": "G1/0"}
+                        }
+                    }
+                }
+            }
+        },
+        "AS6":{
+            "AS_NAME" : "6666",
+            "PROTOCOL": "OSPF",
+            "ADDRESSING_RANGE": "192.173.0.0/16",
+
+            "ROUTERS":{
+
+                "CE5":{
+
+                    "INTERFACES":{
+
+                        "G1/0": {
+                            "NEIGHBORS": {"R5": "G1/0"}
+                        },
+                        "G2/0": {
+                            "NEIGHBORS": {"PE3": "G2/0"},
+                            "PROTOCOL": "EBGP"
+                        }
+                    }
+                },
+                "R5":{
+
+                    "INTERFACES":{
+
+                        "G1/0": {
+                            "NEIGHBORS": {"CE5": "G1/0"}
+                        }
+                    }
+                }
+            }
+        },
+        "AS7":{
+            "AS_NAME" : "7777",
+            "PROTOCOL": "OSPF",
+            "ADDRESSING_RANGE": "192.174.0.0/16",
+
+            "ROUTERS":{
+
+                "CE6":{
+
+                    "INTERFACES":{
+
+                        "G1/0": {
+                            "NEIGHBORS": {"R6": "G1/0"}
+                        },
+                        "G2/0": {
+                            "NEIGHBORS": {"PE4": "G2/0"},
+                            "PROTOCOL": "EBGP"
+                        }
+                    }
+                },
+                "R6":{
+
+                    "INTERFACES":{
+
+                        "G1/0": {
+                            "NEIGHBORS": {"CE6": "G1/0"}
                         }
                     }
                 }
