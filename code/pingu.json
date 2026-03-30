@@ -3,28 +3,37 @@
         "EBGP_ADDRESSING_RANGE": "192.200.0.0/16",
         "AS1":{
             "AS_NAME":"1111",
-            "PEERS":["AS2","AS3","AS4","AS5"],
+            "PEERS":["AS2","AS3","AS4"],
+            "CLIENTS":["AS5"],
+            "PROVIDERS":[],
             "VPN":{
-                "HAUT":{"CLIENTS":["CE1","CE2"]},
-                "BAS":{"CLIENTS":["CE3","CE4"]}
+                "HAUT":{"CLIENTS":["CE1","CE2"]}
             }
         },
         
         "AS2":{
             "AS_NAME":"2222",
-            "PEERS":["AS1"]
+            "PEERS":["AS1"],
+            "CLIENTS":[],
+            "PROVIDERS":[]
         },
         "AS3":{
             "AS_NAME":"3333",
-            "PEERS":["AS1"]
+            "PEERS":["AS1"],
+            "CLIENTS":[],
+            "PROVIDERS":[]
         },
         "AS4":{
             "AS_NAME":"4444",
-            "PEERS":["AS1"]
+            "PEERS":["AS1"],
+            "CLIENTS":[],
+            "PROVIDERS":[]
         },
         "AS5":{
             "AS_NAME":"5555",
-            "PEERS":["AS1"]
+            "PEERS":[],
+            "CLIENTS":[],
+            "PROVIDERS":["AS1"]
         }
     },
     "Structure":{
@@ -51,6 +60,9 @@
                         "G3/0": {
                             "NEIGHBORS": {"CE3": "G2/0"},
                             "PROTOCOL": "EBGP"
+                        },
+                        "G4/0": {
+                            "NEIGHBORS": {"P3": "G1/0"}
                         }
 
                     }
@@ -81,6 +93,32 @@
                         }
                     }
                 },
+                "P3":{
+
+                    "INTERFACES":{
+
+                        "G1/0": {
+                            "NEIGHBORS": {"PE1": "G4/0"}
+                        },
+
+                        "G2/0": {
+                            "NEIGHBORS": {"P4": "G2/0"}
+                        }
+                    }
+                },
+                "P4":{
+
+                    "INTERFACES":{
+
+                        "G1/0": {
+                            "NEIGHBORS": {"PE2": "G4/0"}
+                        },
+
+                        "G2/0": {
+                            "NEIGHBORS": {"P3": "G2/0"}
+                        }
+                    }
+                },
                 "PE2":{
 
                     "INTERFACES":{
@@ -95,6 +133,9 @@
                         "G3/0": {
                             "NEIGHBORS": {"CE4": "G2/0"},
                             "PROTOCOL": "EBGP"
+                        },
+                        "G4/0": {
+                            "NEIGHBORS": {"P4": "G1/0"}
                         }
 
                     }

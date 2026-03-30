@@ -16,6 +16,7 @@ def trouve_routeur_voisin(interface,router_list):
 
     j = 0
     found_client = False
+    routeur_client = None
     while j < len(router_list) and not found_client:
         r = router_list[j]
         k = 0
@@ -39,9 +40,9 @@ def write_config(router, out_file, router_list, as_list, IPprotocol,rd_increment
     write_interfaces_config(conf, router, router_list,as_list, IPprotocol,rd_incrementer)
     for i in router.liste_int:
         if "EBGP" in i.protocol_list :
-            write_bgp_config(conf, router, router_list, IPprotocol,rd_incrementer)
+            write_bgp_config(conf, router, router_list,as_list, IPprotocol,rd_incrementer)
             if rd_incrementer !=0:
-                write_vpnv4_address_family(conf,router,router_list,as_list,rd_incrementer)
+                write_vpnv4_address_family(conf,router,router_list,as_list)
             else:
                 write_ipv4_address_family(conf, router, router_list, as_list, IPprotocol)
                 write_ipv6_address_family(conf, router, router_list, as_list, IPprotocol)
@@ -277,7 +278,7 @@ def write_GE(conf, interface,router,router_list,as_list, IPprotocol,rd_increment
 # === Protocoles de routage ===
 # =============================
 
-def write_bgp_config(conf, router,router_list, IPprotocol,rd_incrementer):
+def write_bgp_config(conf, router,router_list,as_list, IPprotocol,rd_incrementer):
     """Écrit la configuration BGP du routeur."""
     conf.write(f"""!
 router bgp {router.AS_name}
@@ -292,16 +293,32 @@ router bgp {router.AS_name}
                 conf.write(f""" neighbor {neighbor.split('/', 1)[0]} remote-as {router.AS_name}
  neighbor {neighbor.split('/', 1)[0]} update-source {interface.name}
 """)
-        elif rd_incrementer == 0:
+        else :
             for protocol in interface.protocol_list:
                 
                 if protocol == "EBGP":
                     
+                    #va récupérer l'as du router
+                    for a in as_list:
+                        if router.AS_name == a.name:
+                            as_nous = a
+
                     #va chercher l'as-name du routeur voisin
                     for router_temp in router_list:
+                        in_vpn = False
                         for temp_interface in router_temp.liste_int:
                             if temp_interface.address in interface.neighbors_address:
-                                conf.write(f""" neighbor {temp_interface.address.split('/', 1)[0]} remote-as {router_temp.AS_name}
+
+                                #si l'interface ne parle pas en VPNv4 alors configurer normalement.
+                                if as_nous.vpn_clients != {}:
+                                    for name in as_nous.vpn_clients.keys():
+                                        
+                                        if router_temp.name in as_nous.vpn_clients[name]["CLIENTS"]:
+                                            in_vpn = True
+                                            break
+                                    
+                                if not in_vpn:
+                                    conf.write(f""" neighbor {temp_interface.address.split('/', 1)[0]} remote-as {router_temp.AS_name}
 """)
     conf.write(f""" !\n""")
 
@@ -312,7 +329,7 @@ def write_ipv4_address_family(conf, router, router_list, as_list, IPprotocol):
         #on va chercher toutes les interfaces et configurer BGP sur chacun d'entre eux: EBGP pour les interfaces en bordure et IBGP pour les loopbacks
         network_done = False
         for interface in router.liste_int:
-            #si on a du EBGP on va network les réseaux de son AS qui ne sont pas des loopbacks
+            #si on a du EBGP on va network les réseaux de son AS qui ne sont pas des loopbacks et si notre connexion EBGP n'est pas une connexion VPN
             if "EBGP" in interface.protocol_list:
                 #si on a pas encore network les réseaux de l'AS, on le fait une fois
                 if not network_done:
@@ -351,15 +368,8 @@ def write_ipv4_address_family(conf, router, router_list, as_list, IPprotocol):
             routeur_voisin = None
             
             # Find the neighbor router by its interface address
-            for r in router_list:
-                for i in r.liste_int:
-                    if i.address.split('/', 1)[0] == voisin.split('/', 1)[0]:   # enlever le mask bien vu
-                        routeur_voisin = r
-                        #print(routeur_voisin)
-                        break
-                if routeur_voisin:
-                    break   # ne pas continuer si on a trouvé le router voisin
-            
+            routeur_voisin = trouve_routeur_voisin(interface,router_list)
+
             if not routeur_voisin:
                 continue
             
@@ -447,14 +457,7 @@ def write_ipv6_address_family(conf, router, router_list, as_list, IPprotocol):
             routeur_voisin = None
             
             # Find the neighbor router by its interface address
-            for r in router_list:
-                for i in r.liste_int:
-                    if i.address.split('/', 1)[0] == voisin.split('/', 1)[0]:   # enlever le mask bien vu
-                        routeur_voisin = r
-                        #print(routeur_voisin)
-                        break
-                if routeur_voisin:
-                    break   # ne pas continuer si on a trouvé le router voisin
+            routeur_voisin = trouve_routeur_voisin(interface,router_list)
             
             if not routeur_voisin:
                 continue
@@ -496,7 +499,7 @@ route-map peer permit 10
 !
 !\n""")
         
-def write_vpnv4_address_family(conf, router, router_list, as_list,rd_incrementer):
+def write_vpnv4_address_family(conf, router, router_list, as_list):
     conf.write(""" address-family vpnv4\n""")
     #on fait toutes les loopback, leurs fonctionnement ne change pas entre la config VPN et iBGP classique
     for i in router.liste_int:
@@ -509,20 +512,77 @@ def write_vpnv4_address_family(conf, router, router_list, as_list,rd_incrementer
     
     for a in as_list:
         if a.name == router.AS_name:
-            for name in a.vpn_clients.keys():
-                conf.write(""" !\n""")
-                conf.write(f""" address-family ipv4 vrf {name}\n""")
-                #à partir des addresses des voisins, il faut retrouver son AS et savoir dans quel connexion VPN il est.
-                for interface in router.liste_int:
+            #à partir des addresses des voisins, il faut retrouver son AS et savoir dans quel connexion VPN il est.
+            interface_list = []
+            for interface in router.liste_int:
+                in_vpn = False
+                for name in a.vpn_clients.keys():
                     routeur_client = trouve_routeur_voisin(interface,router_list)
                     if routeur_client.name in a.vpn_clients[name]["CLIENTS"]:
+                        in_vpn = True
+                        conf.write(""" !\n""")
+                        conf.write(f""" address-family ipv4 vrf {name}\n""")
                         conf.write(f"""  neighbor {interface.neighbors_address[0].split('/', 1)[0]} remote-as {routeur_client.AS_name}\n""")
                         conf.write(f"""  neighbor {interface.neighbors_address[0].split('/', 1)[0]} activate\n""")
+                        conf.write(""" exit-address-family\n""")
+                        conf.write(""" !\n""")
+                
+                if not in_vpn and "EBGP" in interface.protocol_list:
+                    interface_list.append(interface)
 
+            conf.write(""" address-family ipv4\n""")
 
-                conf.write(""" exit-address-family\n""")
+            for i in interface_list:
+                list_as_networks = []
+                #on cherche dans tout les routeurs du réseau toutes les interfaces de chaque routeur afin de trouver tous les réseaux de l'AS
+                for routers in router_list:
+                    for interfaces in routers.liste_int:
+                        #on formate l'adresse pour récupérer seulement son réseau
+                        réseau_interface_base = ipaddress.IPv4Interface(interfaces.address).network
+
+                        #si le réseau n'a pas déjà été vu et qu'il appartient à notre AS et que ce n'est pas un réseau de loopback alors on le network.
+                        if réseau_interface_base not in list_as_networks and router.AS_name == routers.AS_name and interfaces.name != "LOOPBACK0":
+                            list_as_networks.append(réseau_interface_base)
+                            mask = str(ipaddress.IPv4Interface(list_as_networks[-1]).netmask)
+                            conf.write(f"""  network {str(list_as_networks[-1]).split('/')[0] + " mask " + mask}\n""")
+                conf.write(f"""  neighbor {i.neighbors_address[0].split('/', 1)[0]} activate\n""")
+                conf.write(f"""  neighbor {i.neighbors_address[0].split('/', 1)[0]} next-hop-self\n""")
+
+                routeur_voisin = trouve_routeur_voisin(i,router_list)
+                as_router_voisin = None
+                for current_as in as_list:
+                    if current_as.name == routeur_voisin.AS_name:
+                        as_router_voisin = current_as
+                        break
+
+                if router.AS_name in as_router_voisin.providers:
+                    conf.write(f"""  neighbor {i.neighbors_address[0].split('/', 1)[0].split('/', 1)[0]} route-map client in\n""")
+                elif router.AS_name in as_router_voisin.peers:
+                    conf.write(f"""  neighbor {i.neighbors_address[0].split('/', 1)[0].split('/', 1)[0]} route-map peer in\n""")
+                elif router.AS_name in as_router_voisin.clients:
+                    conf.write(f"""  neighbor {i.neighbors_address[0].split('/', 1)[0].split('/', 1)[0]} route-map provider in\n""")
+
+            conf.write(""" exit-address-family\n""")
+            conf.write("""!\n""")
+                
+
+                
     conf.write("""!
 ip forward-protocol nd
+!
+!
+no ip http server
+no ip http secure-server
+!
+!
+route-map client permit 10
+ set local-preference 200
+!
+route-map provider permit 10
+ set local-preference 80
+!
+route-map peer permit 10
+ set local-preference 90
 !
 !\n""")
                 
