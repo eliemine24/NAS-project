@@ -22,7 +22,7 @@ Les routeurs PE (Provider Edge) sont capables de gérer simultanément :
 
 ## Utilisation 
 Voici les étapes à suivre afin d'automatiser le routage de votre réseau :
-1. Complétez le fichier d'intentions _intent_file.json_ en indiquant les spécifications de votre réseau. 
+1. Complétez le fichier d'intentions _pingu.json_ en indiquant les spécifications de votre réseau. 
 2. Lancez le fichier _main.py_, ouvrez GNS3 et allumez vos routeurs.
 
 
