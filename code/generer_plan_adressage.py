@@ -8,6 +8,7 @@ Il supporte les configurations intra-AS et inter-AS.
 import ipaddress
 import json
 import os
+from generate_classes import json_to_dict
 
 #VARIABLES GLOBALES
 
@@ -176,14 +177,18 @@ def creer_registre_dynamique(donnees_intent):
     for id_as, as_info in AS_CONFIG.items():
         # Parcourir chaque routeur du système autonome
         nmb_routeur = 1
-
+        nmb_routeur_lb = 1
         for nom_r in as_info["ROUTEURS"]:
             # Initialiser l'entrée du routeur dans le registre
             registre.setdefault(nom_r, {})
             # Récupérer le réseau de loopback
             lb_net = as_info["SOUS_RESEAUX"][0]
-            # Assigner une adresse loopback au routeur
-            registre[nom_r]["LOOPBACK0"] = f"{lb_net.hosts()[0]+loopback_address_skip_number+nmb_routeur}/32"
+            for nom_int, info_int in donnees_intent["Structure"][id_as]["ROUTERS"][nom_r]["INTERFACES"].items():
+                if "PROTOCOL" in info_int and info_int["PROTOCOL"] == "EBGP":
+                    # Assigner une adresse loopback au routeur si il est de bordure
+                    registre[nom_r]["LOOPBACK0"] = f"{lb_net.hosts()[0]+loopback_address_skip_number+nmb_routeur_lb}/32"
+                    nmb_routeur_lb += 1
+                    break
 
             # Parcourir les interfaces du routeur
             interfaces = donnees_intent["Structure"][id_as]["ROUTERS"][nom_r]["INTERFACES"]
@@ -238,7 +243,13 @@ def generer_plan_adressage(intention):
     registre = creer_registre_dynamique(intention)
     # Structure pour stocker le résultat final
     resultat = {"Intent": intention.get("Intent", {}), "Structure": {}}
-
+    rt_lastnmb = 1000
+    for as_name,as_info in resultat["Intent"].items():
+        if "VPN" in as_info:
+            for nom_vpn,clients in resultat["Intent"][as_name]["VPN"].items():
+                resultat["Intent"][as_name]["VPN"][nom_vpn] = {"CLIENTS":clients["CLIENTS"],
+                                                               "RT":f"100:{rt_lastnmb}"}
+                rt_lastnmb += 10
     # Parcourir chaque système autonome
     nmb_routeur = 1
     for id_as, info_as in AS_CONFIG.items():
@@ -251,7 +262,13 @@ def generer_plan_adressage(intention):
         # Récupérer les routeurs source de l'intention
         routeurs_source = intention["Structure"][id_as]["ROUTERS"]
 
-        # Parcourir chaque routeur
+        # Parcourir chaque routeur une première fois pour trouver les routeurs de bordures
+        routeur_bordure = []
+        for nom_r, contenu_r in routeurs_source.items():
+            for nom_int, info_int in contenu_r["INTERFACES"].items():
+                if "PROTOCOL" in info_int and info_int["PROTOCOL"] == "EBGP":
+                    routeur_bordure.append(nom_r)
+                    break
 
         for nom_r, contenu_r in routeurs_source.items():
 
@@ -284,45 +301,50 @@ def generer_plan_adressage(intention):
 
                 # Ajouter le protocole eBGP si applicable
                 if "PROTOCOL" in info_int: r_data["INTERFACES"][nom_int]["PROTOCOL"] = "EBGP"
-
-            # Récupérer les adresses loopback des autres routeurs du même AS
-            autres_lb = [registre[a]["LOOPBACK0"] for a in info_as["ROUTEURS"] if a != nom_r ]
-            # Configurer l'interface loopback
-            r_data["INTERFACES"]["LOOPBACK0"] = {
-                "ADDRESS": registre[nom_r]["LOOPBACK0"],
-                "NEIGHBORS_ADDRESS": autres_lb
-            }
+            
+            if nom_r in routeur_bordure:
+                # Récupérer les adresses loopback des autres routeurs de bordures du même AS
+                autres_lb = []
+                for a in info_as["ROUTEURS"]:
+                    #on check si c'est des routeurs de bordures
+                    if a != nom_r and a in routeur_bordure:
+                        autres_lb.append(registre[a]["LOOPBACK0"])
+                # Configurer l'interface loopback
+                r_data["INTERFACES"]["LOOPBACK0"] = {
+                    "ADDRESS": registre[nom_r]["LOOPBACK0"],
+                    "NEIGHBORS_ADDRESS": autres_lb
+                }
             # Ajouter le routeur au résultat
             resultat["Structure"][id_as]["ROUTERS"][nom_r] = r_data
             nmb_routeur += 1
     return resultat
 
-#EXECUTION
-# Cette section exécute le script principal quand le fichier est lancé directement
 
-# Obtenir le chemin du dossier courant (où est situé ce script)
-dossier = os.path.dirname(os.path.abspath(__file__))
-# Construire le chemin du fichier d'intention
-f_entree = os.path.join(dossier, "Intent_file.json")
+def ecrire_plan_adressage(file_name):
+    dossier = os.path.dirname(os.path.abspath(__file__))
+    # Construire le chemin du fichier d'intention
+    f_entree = os.path.join(dossier, file_name)
 
-# Charger le fichier d'intention JSON
-intent = charger_json_en_dict(f_entree)
+    # Charger le fichier d'intention JSON
+    intent = charger_json_en_dict(f_entree)
 
-# Vérifier si le fichier a pu être chargé avec succès
-if intent:
-    print(f"Clés trouvées à la racine du JSON : {list(intent.keys())}")
-    
-    # Vérifier la présence de la clé 'Structure' (majuscule ou minuscule)
-    cle_structure = "Structure" if "Structure" in intent else "structure"
-    
-    if cle_structure in intent:
-        print(f"Succès : Clé '{cle_structure}' trouvée !")
-        # Initialiser la topologie (remplit AS_CONFIG et EBGP_CONFIG)
-        initialiser_topologie(intent)
-        # Générer le plan d'adressage complet
-        mon_plan = generer_plan_adressage(intent)
-        # Sauvegarder le résultat dans un fichier JSON
-        sauvegarder_dict_en_json(mon_plan, "test.json")
-    else:
-        print("ERREUR CRITIQUE : Aucune clé 'Structure' ou 'structure' trouvée.")
-        print("Voici le contenu du fichier pour t'aider :", intent)
+
+    # Vérifier si le fichier a pu être chargé avec succès
+    if intent:
+        print(f"Clés trouvées à la racine du JSON : {list(intent.keys())}")
+        
+        # Vérifier la présence de la clé 'Structure' (majuscule ou minuscule)
+        cle_structure = "Structure" if "Structure" in intent else "structure"
+        
+        if cle_structure in intent:
+            print(f"Succès : Clé '{cle_structure}' trouvée !")
+            # Initialiser la topologie (remplit AS_CONFIG et EBGP_CONFIG)
+            initialiser_topologie(intent)
+            # Générer le plan d'adressage complet
+            mon_plan = generer_plan_adressage(intent)
+            # Sauvegarder le résultat dans un fichier JSON
+            sauvegarder_dict_en_json(mon_plan, "test.json")
+        else:
+            print("ERREUR CRITIQUE : Aucune clé 'Structure' ou 'structure' trouvée.")
+            print("Voici le contenu du fichier pour t'aider :", intent)
+
